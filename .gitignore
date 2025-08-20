@@ -1,0 +1,36 @@
+.DS_Store
+node_modules
+.turbo
+*.log
+.next
+dist
+dist-ssr
+*.local
+.env
+.cache
+server/dist
+public/dist
+.idea/
+.yalc/
+yalc.lock
+./build/
+playwright-report/
+.env/
+.pnpm-store/
+
+# codecov binary
+codecov
+
+# Remove sitemap files (generated at build time)
+sitemap*.xml
+
+# typedoc
+packages/*/typedoc/*
+
+*storybook.log
+storybook-static
+.aider*
+
+tsconfig.tsbuildinfo
+.cursor
+apps/dashboard/node-compile-cache
