@@ -1,0 +1,222 @@
+/* General Body Styles */
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #0d0d0d; /* Dark background */
+  color: white;
+  overflow-x: hidden;
+}
+
+/* Header Styles */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 3rem;
+  background: #121212; /* Header background */
+  border-bottom: 1px solid #2a2a2a; /* Bottom border */
+}
+
+header .logo {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff; /* White logo */
+}
+
+/* Navigation Links */
+nav a {
+  color: #ccc;
+  margin: 0 1rem;
+  text-decoration: none;
+}
+
+nav a:hover {
+  color: #fff; /* Link hover effect */
+}
+
+/* Wallet Button */
+.wallet-btn {
+  background: #5c6df2; /* Button background */
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wallet-btn:hover {
+  background-color: #0056b3; /* Button hover effect */
+}
+
+/* Hero Section Styles */
+.hero {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, #1f1f1f, #111); /* Gradient background */
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  color: #aaa;
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.hero button {
+  background: #5c6df2;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  color: white;
+  cursor: pointer;
+}
+
+.hero button:hover {
+  background: #4758d6;
+}
+
+/* Section Title Styles */
+.section-title {
+  text-align: center;
+  font-size: 2rem;
+  margin: 3rem 0 1rem;
+  color: #fff;
+}
+
+/* NFT Grid Styles */
+.nft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2rem;
+  padding: 0 3rem 4rem;
+}
+
+.nft-card {
+  background: #1c1c1c;
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.nft-card:hover {
+  transform: scale(1.02); /* Hover effect on NFT cards */
+}
+
+.nft-card img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.nft-card h3 {
+  margin: 0.8rem 0 0.2rem;
+}
+
+.nft-card p {
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+/* Footer Styles */
+footer {
+  padding: 2rem 3rem;
+  text-align: center;
+  background: #121212;
+  border-top: 1px solid #2a2a2a;
+  color: #777;
+}
+
+/* Login Box Styles */
+.login-box {
+  background-color: #fff;
+  width: 300px;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none; /* Hidden by default */
+}
+
+.login-box h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.login-box input[type="text"],
+.login-box input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.login-box input[type="submit"] {
+  width: 100%;
+  padding: 10px;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.login-box input[type="submit"]:hover {
+  background-color: #555;
+}
+
+.message {
+  text-align: center;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  /* Mobile View */
+  header {
+    padding: 1rem;
+  }
+
+  nav a {
+    margin: 0 0.5rem;
+  }
+
+  .nft-grid {
+    padding: 0 1rem 4rem;
+  }
+
+  .nft-card {
+    padding: 0.5rem;
+  }
+
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+
+  .hero p {
+    font-size: 1rem;
+  }
+
+  .hero button {
+    padding: 0.8rem 1.5rem;
+  }
+
+  .login-box {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .wallet-btn {
+    padding: 0.5rem 1rem;
+  }
+}
