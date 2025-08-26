@@ -1,0 +1,200 @@
+{
+  "name": "Metis — Social to NFT Mint",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "metis/social-mint",
+        "options": {
+          "responseCode": 200,
+          "responseData": "={{ {\"ok\": true, \"jobId\": $json.jobId || null } }}",
+          "responseHeaders": {},
+          "responseMode": "lastNode"
+        }
+      },
+      "id": "Webhook_Trigger",
+      "name": "HTTP Webhook (Trigger)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "metis-social-mint",
+      "notes": "POST JSON payload: { source, url, chainId, contract, toAddress, license, listPriceEth?, jobId? }"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate and normalize incoming payload\nconst required = ['source','url','chainId','contract','toAddress'];\nfor (const k of required) {\n  if (!$json[k]) throw new Error(`Missing field: ${k}`);\n}\nconst out = {\n  source: $json.source,\n  url: $json.url,\n  chainId: Number($json.chainId),\n  contract: $json.contract,\n  toAddress: $json.toAddress,\n  license: $json.license || 'CC-BY-4.0',\n  listPriceEth: $json.listPriceEth || null,\n  jobId: $json.jobId || (Date.now().toString(36) + Math.random().toString(36).slice(2,8)),\n};\nreturn out;\n"
+      },
+      "id": "Validate_Input",
+      "name": "Function: Validate",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.url}}",
+        "responseFormat": "file",
+        "allowUnauthorizedCerts": true,
+        "ignoreResponseCode": true
+      },
+      "id": "Fetch_Media",
+      "name": "HTTP Request: Fetch Media (placeholder)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        700,
+        180
+      ],
+      "notes": "Replace with official API call (Instagram/TikTok/YT). For testing, use a direct media URL."
+    },
+    {
+      "parameters": {
+        "url": "https://api.pinata.cloud/pinning/pinFileToIPFS",
+        "options": {},
+        "sendBinaryData": true,
+        "binaryPropertyName": "data",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "pinataApi",
+        "jsonParameters": false
+      },
+      "id": "Upload_Pinata_File",
+      "name": "HTTP: Upload to IPFS (Pinata)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        950,
+        180
+      ],
+      "notes": "Set Pinata credentials in n8n. Output contains IpfsHash."
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build ERC721 metadata.json using the uploaded content CID\nconst cid = $json.IpfsHash || ($json.ipfsHash) || ($json.Hash) || null;\nif (!cid) throw new Error('Missing CID from Pinata response');\nconst storageUri = `ipfs://${cid}`;\nconst name = `Metis Asset — ${new Date().toISOString()}`;\nconst description = `Imported from ${$item(0).$node['Function: Validate'].json.source} — original: ${$item(0).$node['Function: Validate'].json.url}`;\nconst attributes = [\n  { trait_type: 'Source', value: $item(0).$node['Function: Validate'].json.source },\n  { trait_type: 'License', value: $item(0).$node['Function: Validate'].json.license }\n];\nreturn {\n  storageUri,\n  metadata: { name, description, image: storageUri, attributes, external_url: $item(0).$node['Function: Validate'].json.url }\n};\n"
+      },
+      "id": "Build_Metadata",
+      "name": "Function: Build metadata.json",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+        "options": {},
+        "jsonParameters": true,
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "pinataApi",
+        "sendQuery": false,
+        "sendBody": true,
+        "jsonBody": "={{$json.metadata}}"
+      },
+      "id": "Upload_Metadata_JSON",
+      "name": "HTTP: Upload metadata.json (Pinata)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.METIS_BACKEND_BASE_URL || \"http://localhost:4000\"}}/metis/mint",
+        "options": {},
+        "jsonParameters": true,
+        "sendBody": true,
+        "jsonBody": "={{ { jobId: $item(0).$node['Function: Validate'].json.jobId, storageUri: $item(0).$node['Function: Build metadata.json'].json.storageUri, metadataUri: $json.IpfsHash ? ('ipfs://' + $json.IpfsHash) : null, toAddress: $item(0).$node['Function: Validate'].json.toAddress, chainId: $item(0).$node['Function: Validate'].json.chainId, contract: $item(0).$node['Function: Validate'].json.contract, listPriceEth: $item(0).$node['Function: Validate'].json.listPriceEth } }}"
+      },
+      "id": "Call_Backend_Mint",
+      "name": "HTTP: Call Backend /metis/mint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1700,
+        300
+      ],
+      "notes": "Backend should perform on-chain mint and return { txHash, tokenId }."
+    }
+  ],
+  "connections": {
+    "HTTP Webhook (Trigger)": {
+      "main": [
+        [
+          {
+            "node": "Function: Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function: Validate": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Fetch Media (placeholder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Fetch Media (placeholder)": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Upload to IPFS (Pinata)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Upload to IPFS (Pinata)": {
+      "main": [
+        [
+          {
+            "node": "Function: Build metadata.json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function: Build metadata.json": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Upload metadata.json (Pinata)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Upload metadata.json (Pinata)": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Call Backend /metis/mint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {},
+  "staticData": {},
+  "id": "metis-social-to-nft"
+}
