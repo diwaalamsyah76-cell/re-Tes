@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NFTVerse — Marketplace</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Web3.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.4/dist/web3.min.js"></script>
+    <style>
+        /* Simple skeleton shimmer */
+        .skeleton {
+            position: relative;
+            overflow: hidden;
+            background: #e5e7eb;
+        }
+
+        .skeleton::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(90deg, rgba(229, 231, 235, 0) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(229, 231, 235, 0) 100%);
+            animation: shimmer 1.2s infinite;
+        }
+
+        @keyframes shimmer {
+            100% {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+    <header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-2xl bg-indigo-600"></div>
+                <h1 class="text-xl font-bold">NFTVerse <span class="text-gray-500">Marketplace</span></h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="networkBadge" class="hidden text-xs px-2 py-1 rounded-full bg-gray-100">-</span>
+                <button id="connectBtn" class="px-4 py-2 rounded-2xl bg-indigo-600 text-white font-medium shadow">
+                    Connect Wallet
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Controls -->
+        <section class="mb-6 grid grid-cols-1 md:grid-cols-12 gap-3">
+            <div class="md:col-span-4">
+                <input id="searchInput" type="text" placeholder="Cari NFT, creator, deskripsi..."
+                    class="w-full px-4 py-2 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="md:col-span-3">
+                <select id="categorySelect"
+                    class="w-full px-4 py-2 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Semua Kategori</option>
+                    <option>Art</option>
+                    <option>Music</option>
+                    <option>Video</option>
+                    <option>Photography</option>
+                    <option>Collectible</option>
+                </select>
+            </div>
+            <div class="md:col-span-3 grid grid-cols-2 gap-3">
+                <input id="minPrice" type="number" step="0.0001" min="0" placeholder="Min ETH"
+                    class="px-4 py-2 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <input id="maxPrice" type="number" step="0.0001" min="0" placeholder="Max ETH"
+                    class="px-4 py-2 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="md:col-span-2">
+                <select id="sortSelect"
+                    class="w-full px-4 py-2 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="newest">Terbaru</option>
+                    <option value="priceAsc">Harga: Rendah → Tinggi</option>
+                    <option value="priceDesc">Harga: Tinggi → Rendah</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Stats row -->
+        <section id="statsRow" class="mb-4 text-sm text-gray-600">Memuat listing…</section>
+
+        <!-- Grid -->
+        <section id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></section>
+
+        <!-- Empty state -->
+        <section id="emptyState" class="hidden text-center py-16">
+            <div class="text-2xl font-semibold mb-2">Tidak ada NFT yang cocok</div>
+            <p class="text-gray-500">Coba ubah kata kunci atau filter.</p>
+        </section>
+    </main>
+
+    <!-- Detail Modal -->
+    <div id="detailWrap" class="hidden fixed inset-0 bg-black/70 z-50 items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+            <div class="relative">
+                <button id="closeDetail"
+                    class="absolute top-3 right-3 w-9 h-9 rounded-full grid place-items-center bg-white/90 border shadow hover:bg-white">✕</button>
+                <img id="detailImage" class="w-full max-h-[440px] object-cover bg-gray-100" alt="NFT Image" />
+            </div>
+            <div class="p-5 grid gap-3">
+                <h2 id="detailTitle" class="text-2xl font-bold"></h2>
+                <p id="detailDesc" class="text-gray-600"></p>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div><span class="text-gray-500">Creator:</span> <span id="detailCreator"
+                            class="font-medium"></span></div>
+                    <div><span class="text-gray-500">Contract:</span> <span id="detailContract"
+                            class="font-mono text-xs"></span></div>
+                    <div><span class="text-gray-500">Token ID:</span> <span id="detailTokenId"
+                            class="font-mono text-xs"></span></div>
+                    <div><span class="text-gray-500">Kategori:</span> <span id="detailCategory"></span></div>
+                </div>
+                <div class="flex items-end justify-between mt-1">
+                    <div>
+                        <div class="text-xs text-gray-500">Harga</div>
+                        <div class="text-2xl font-bold"><span id="detailPrice"></span> ETH</div>
+                    </div>
+                    <button id="buyBtn"
+                        class="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-semibold shadow disabled:opacity-50 disabled:cursor-not-allowed">Beli
+                        Sekarang</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================
+        // CONFIG — Ganti sesuai kontrak
+        // =============================
+        const CONFIG = {
+            // Mode 1: Satu kontrak ERC-721 dengan fitur listing di dalamnya
+            mode: "singleContract", // "singleContract" | "separateMarketplace"
+
+            // Jika mode: singleContract
+            nftContractAddress: "0xYourNftContractAddress",
+            nftContractABI: [ /* TODO: paste ABI ERC-721 + fungsi isListed(tokenId), priceOf(tokenId), buy(tokenId) */],
+
+            // Jika mode: separateMarketplace (market terpisah dari ERC-721)
+            marketplaceAddress: "0xYourMarketplaceAddress",
+            marketplaceABI: [ /* TODO: paste ABI Marketplace dengan getAllListings(), buy(listingId) */],
+
+            // Opsional: network name untuk badge
+            networkName: ""
+        };
+
+        // =====================================================================================
+        // Utils kecil
+        // =====================================================================================
+        const $ = (id) => document.getElementById(id);
+        const fmtAddr = (a) => a ? a.slice(0, 6) + "…" + a.slice(-4) : "-";
+        const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+        function readCategoryFromMetadata(meta) {
+            if (!meta) return "-";
+            if (meta.category) return meta.category;
+            if (Array.isArray(meta.attributes)) {
+                const cat = meta.attributes.find(a => (a.trait_type || "").toLowerCase() === "category");
+                if (cat) return cat.value;
+            }
+            return "-";
+        }
+
+        function sanitizeURI(uri) {
+            // IPFS helper: ipfs://CID/path -> https://ipfs.io/ipfs/CID/path
+            if (typeof uri !== 'string') return uri;
+            if (uri.startsWith('ipfs://')) return uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
+            return uri;
+        }
+
+        function applyFiltersAndSort(items) {
+            const q = $("searchInput").value.trim().toLowerCase();
+            const cat = $("categorySelect").value;
+            const min = parseFloat($("minPrice").value || "0");
+            const maxRaw = $("maxPrice").value;
+            const max = maxRaw === "" ? Number.POSITIVE_INFINITY : parseFloat(maxRaw);
+            const sort = $("sortSelect").value;
+
+            let filtered = items.filter(it => {
+                const t = (it.name || "").toLowerCase();
+                const d = (it.description || "").toLowerCase();
+                const c = (it.creator || "").toLowerCase();
+                const inSearch = !q || t.includes(q) || d.includes(q) || c.includes(q);
+                const inCat = !cat || (it.category === cat);
+                const inPrice = (it.priceEth >= (isNaN(min) ? 0 : min)) && (it.priceEth <= (isNaN(max) ? Number.POSITIVE_INFINITY : max));
+                return inSearch && inCat && inPrice;
+            });
+
+            if (sort === 'priceAsc') filtered.sort((a, b) => a.priceEth - b.priceEth);
+            else if (sort === 'priceDesc') filtered.sort((a, b) => b.priceEth - a.priceEth);
+            else if (sort === 'newest') filtered.sort((a, b) => (b.listedAt || 0) - (a.listedAt || 0));
+
+            return filtered;
+        }
+
+        function renderSkeleton(count = 8) {
+            const grid = $("grid");
+            grid.innerHTML = "";
+            for (let i = 0; i < count; i++) {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl shadow p-3 grid gap-3";
+                card.innerHTML = `
+          <div class="skeleton w-full h-48 rounded-xl"></div>
+          <div class="skeleton h-5 w-2/3 rounded"></div>
+          <div class="skeleton h-4 w-1/2 rounded"></div>
+          <div class="flex items-center justify-between">
+            <div class="skeleton h-6 w-20 rounded"></div>
+            <div class="skeleton h-9 w-24 rounded-xl"></div>
+          </div>
+        `;
+                grid.appendChild(card);
+            }
+        }
+
+        function renderGrid(items) {
+            const grid = $("grid");
+            grid.innerHTML = "";
+            if (!items.length) {
+                $("emptyState").classList.remove('hidden');
+                return;
+            }
+            $("emptyState").classList.add('hidden');
+
+            for (const it of items) {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl shadow hover:shadow-lg transition p-3 grid gap-3";
+                card.innerHTML = `
+          <div class="aspect-[4/3] overflow-hidden rounded-xl bg-gray-100">
+            <img src="${it.image}" class="w-full h-full object-cover" alt="${it.name}" onerror="this.style.display='none'"/>
+          </div>
+          <div>
+            <div class="font-semibold line-clamp-1">${it.name || 'Untitled'}</div>
+            <div class="text-xs text-gray-500 line-clamp-1">by ${fmtAddr(it.creator)}</div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[10px] text-gray-500">Harga</div>
+              <div class="text-lg font-bold">${it.priceEth} ETH</div>
+            </div>
+            <button class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium">Detail</button>
+          </div>
+        `;
+                card.querySelector('button').addEventListener('click', () => openDetail(it));
+                grid.appendChild(card);
+            }
+        }
+
+        function updateStats(all, shown) {
+            $("statsRow").textContent = `${shown.length} dari ${all.length} listing ditampilkan`;
+        }
+
+        // ==============================================
+        // Web3 wiring
+        // ==============================================
+        let web3, accounts = [], nftContract, marketplaceContract;
+        let allListings = []; // cache penuh dari blockchain
+
+        async function connect() {
+            if (!window.ethereum) {
+                alert('MetaMask tidak ditemukan. Install terlebih dahulu.');
+                return;
+            }
+            web3 = new Web3(window.ethereum);
+            accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+            const chainId = await web3.eth.getChainId();
+            $("networkBadge").classList.remove('hidden');
+            $("networkBadge").textContent = CONFIG.networkName || `Chain ID: ${chainId}`;
+
+            $("connectBtn").textContent = `Connected: ${fmtAddr(accounts[0])}`;
+            $("connectBtn").classList.add('bg-gray-900');
+
+            await initContracts();
+            await refreshListings();
+
+            // React to account / chain changes
+            if (window.ethereum && window.ethereum.on) {
+                window.ethereum.on('accountsChanged', () => location.reload());
+                window.ethereum.on('chainChanged', () => location.reload());
+            }
+        }
+
+        async function initContracts() {
+            if (CONFIG.mode === 'singleContract') {
+                nftContract = new web3.eth.Contract(CONFIG.nftContractABI, CONFIG.nftContractAddress);
+            } else {
+                marketplaceContract = new web3.eth.Contract(CONFIG.marketplaceABI, CONFIG.marketplaceAddress);
+            }
+        }
+
+        // =====================================================
+        // Fetch Listings — dua mode implementasi
+        // =====================================================
+        async function fetchListings_singleContract() {
+            const items = [];
+            // Asumsi: kontrak mengimplement ERC721Enumerable (totalSupply, tokenByIndex)
+            // + isListed(tokenId) -> bool, priceOf(tokenId) -> uint256, ownerOf(tokenId)
+            const total = Number(await nftContract.methods.totalSupply().call());
+            for (let i = 0; i < total; i++) {
+                const tokenId = await nftContract.methods.tokenByIndex(i).call();
+                const listed = await nftContract.methods.isListed(tokenId).call();
+                if (!listed) continue;
+                const priceWei = await nftContract.methods.priceOf(tokenId).call();
+                const tokenURI = await nftContract.methods.tokenURI(tokenId).call();
+                const owner = await nftContract.methods.ownerOf(tokenId).call();
+
+                let meta = {};
+                try {
+                    const res = await fetch(sanitizeURI(tokenURI));
+                    meta = await res.json();
+                } catch (e) {
+                    console.warn('Gagal memuat metadata', tokenURI, e);
+                }
+
+                const image = sanitizeURI(meta.image || meta.image_url || "");
+                const category = readCategoryFromMetadata(meta);
+                const priceEth = Number(web3.utils.fromWei(priceWei, 'ether'));
+                const listedAt = Date.now(); // fallback. Ganti dengan data onchain kalau ada.
+
+                items.push({
+                    mode: 'singleContract',
+                    tokenId: Number(tokenId),
+                    contract: CONFIG.nftContractAddress,
+                    name: meta.name || `#${tokenId}`,
+                    description: meta.description || '',
+                    image, category,
+                    priceEth,
+                    creator: owner, // atau meta.creator jika ada
+                    listedAt,
+                });
+            }
+            return items;
+        }
+
+        async function fetchListings_separateMarketplace() {
+            const items = [];
+            // Asumsi: marketplace.getAllListings() -> array of { id, nft, tokenId, seller, price, tokenURI, listedAt }
+            const arr = await marketplaceContract.methods.getAllListings().call();
+            for (const row of arr) {
+                let meta = {};
+                try {
+                    const res = await fetch(sanitizeURI(row.tokenURI));
+                    meta = await res.json();
+                } catch (e) { }
+                const image = sanitizeURI(meta.image || meta.image_url || "");
+                const category = readCategoryFromMetadata(meta);
+                const priceEth = Number(web3.utils.fromWei(row.price, 'ether'));
+                items.push({
+                    mode: 'separateMarketplace',
+                    listingId: Number(row.id),
+                    tokenId: Number(row.tokenId),
+                    contract: row.nft,
+                    name: meta.name || `#${row.tokenId}`,
+                    description: meta.description || '',
+                    image, category,
+                    priceEth,
+                    creator: row.seller,
+                    listedAt: Number(row.listedAt || Date.now())
+                });
+            }
+            return items;
+        }
+
+        async function refreshListings() {
+            renderSkeleton();
+            try {
+                allListings = CONFIG.mode === 'singleContract'
+                    ? await fetchListings_singleContract()
+                    : await fetchListings_separateMarketplace();
+            } catch (e) {
+                console.error(e);
+                allListings = [];
+            }
+            applyUIUpdate();
+        }
+
+        function applyUIUpdate() {
+            const shown = applyFiltersAndSort(allListings);
+            renderGrid(shown);
+            updateStats(allListings, shown);
+        }
+
+        // ==============================================
+        // Detail & Buy
+        // ==============================================
+        let currentDetail = null;
+
+        function openDetail(item) {
+            currentDetail = item;
+            $("detailImage").src = item.image;
+            $("detailTitle").textContent = item.name || '-';
+            $("detailDesc").textContent = item.description || '';
+            $("detailCreator").textContent = fmtAddr(item.creator);
+            $("detailContract").textContent = fmtAddr(item.contract);
+            $("detailTokenId").textContent = String(item.tokenId);
+            $("detailCategory").textContent = item.category || '-';
+            $("detailPrice").textContent = item.priceEth;
+
+            $("buyBtn").disabled = !accounts.length;
+            $("detailWrap").classList.remove('hidden');
+            $("detailWrap").classList.add('flex');
+        }
+
+        $("closeDetail").addEventListener('click', () => {
+            $("detailWrap").classList.add('hidden');
+            $("detailWrap").classList.remove('flex');
+        });
+
+        $("buyBtn").addEventListener('click', async () => {
+            if (!currentDetail) return;
+            try {
+                if (CONFIG.mode === 'singleContract') {
+                    const priceWei = web3.utils.toWei(String(currentDetail.priceEth), 'ether');
+                    await nftContract.methods.buy(currentDetail.tokenId).send({ from: accounts[0], value: priceWei });
+                } else {
+                    const priceWei = web3.utils.toWei(String(currentDetail.priceEth), 'ether');
+                    await marketplaceContract.methods.buy(currentDetail.listingId).send({ from: accounts[0], value: priceWei });
+                }
+                alert('Pembelian sukses');
+                $("detailWrap").classList.add('hidden');
+                await refreshListings();
+            } catch (e) {
+                console.error(e);
+                alert(e?.message || 'Transaksi gagal');
+            }
+        });
+
+        // ==============================================
+        // Events: filter / search (debounced)
+        // ==============================================
+        let debounceTimer;
+        function debouncedUpdate() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(applyUIUpdate, 150);
+        }
+        $("searchInput").addEventListener('input', debouncedUpdate);
+        $("categorySelect").addEventListener('change', applyUIUpdate);
+        $("minPrice").addEventListener('input', debouncedUpdate);
+        $("maxPrice").addEventListener('input', debouncedUpdate);
+        $("sortSelect").addEventListener('change', applyUIUpdate);
+
+        // ==============================================
+        // Boot
+        // ==============================================
+        $("connectBtn").addEventListener('click', connect);
+
+        // Optional: auto-connect if user already authorized
+        if (window.ethereum && window.ethereum.selectedAddress) {
+            connect();
+        } else {
+            // Render skeleton on first load
+            renderSkeleton();
+        }
+    </script>
+</body>
+
+</html>

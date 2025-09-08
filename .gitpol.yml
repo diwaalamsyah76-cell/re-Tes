@@ -1,0 +1,62 @@
+// pages/post/[id].tsx
+
+import { FC } from 'react';
+import { GetStaticProps, GetStaticPaths } from 'next';
+import styles from './postPage.module.css'; // Import the CSS module
+
+interface PostProps {
+  post: {
+    id: string;
+    title: string;
+    content: string;
+    author: string;
+    date: string;
+  };
+}
+
+const PostPage: FC<PostProps> = ({ post }) => {
+  return (
+    <div className={styles.container}>
+      <h1 className={styles.title}>{post.title}</h1>
+      <div className={styles.meta}>
+        <span>By {post.author}</span> | <span>{post.date}</span>
+      </div>
+      <div className={styles.content}>
+        <p>{post.content}</p>
+      </div>
+      <div className={styles.actions}>
+        <a href="#">Share</a>
+        <a href="#">Comment</a>
+      </div>
+    </div>
+  );
+};
+
+// Static Paths and Props for the blog post
+export const getStaticPaths: GetStaticPaths = async () => {
+  const posts = [
+    { id: '1' },
+    { id: '2' },
+    { id: '3' },
+  ];
+
+  const paths = posts.map(post => ({
+    params: { id: post.id },
+  }));
+
+  return { paths, fallback: false };
+};
+
+export const getStaticProps: GetStaticProps = async ({ params }) => {
+  const post = {
+    id: params?.id as string,
+    title: `Post Title ${params?.id}`,
+    content: `This is the content of post ${params?.id}. Lorem ipsum dolor sit amet.`,
+    author: 'John Doe',
+    date: 'September 8, 2025',
+  };
+
+  return { props: { post } };
+};
+
+export default PostPage;
